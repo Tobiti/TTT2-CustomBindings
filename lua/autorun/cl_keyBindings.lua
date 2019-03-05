@@ -1,6 +1,18 @@
 if SERVER then
     AddCSLuaFile()
 end
+if CLIENT then
+	hook.Add("TTT2ScoreboardAddPlayerRow", "TTT2AddCustomBindingsDevs", function(ply)
+		local tsid64 = ply:SteamID64()
+
+		if tostring(tsid64) == "76561197989909602" then
+			AddTTT2AddonDev(tsid64)
+		end
+		if tostring(tsid64) == "76561198047056948" then
+			AddTTT2AddonDev(tsid64)
+		end
+	end)
+end
 
 conCommandsToBind={}
 
@@ -324,16 +336,3 @@ net.Receive ("ttt2_cb_removeEntry", function( length, ply )
 		end
 	end
 end)
-
-if CLIENT then
-	hook.Add("TTT2ScoreboardAddPlayerRow", "TTTAddMelonAddonDevTobiti", function(ply)
-		local tsid64 = ply:SteamID64()
-
-		if tostring(tsid64) == "76561197989909602" then
-			AddTTT2AddonDev(tsid64)
-		end
-		if tostring(tsid64) == "76561198047056948" then
-			AddTTT2AddonDev(tsid64)
-		end
-	end)
-end
