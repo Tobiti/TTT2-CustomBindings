@@ -219,10 +219,16 @@ if SERVER then
 	end
 	
 	function conCommandsToBind.LoadCustomBindingFromSQL()
-		local tmp = sql.Query("SELECT * FROM ttt2_custombindings")
+		local result = sql.Query("SELECT * FROM ttt2_custombindings")
 		
-		for k, v in pairs(tmp) do
-			conCommandsToBind.Add(v.Key, v.Command, v.Name, v.Category, v.Activated == "1")
+		if result != nil then
+			if result then
+				for k, v in pairs(result) do
+					conCommandsToBind.Add(v.Key, v.Command, v.Name, v.Category, v.Activated == "1")
+				end
+			else
+				print("[TTT2][Bindings] Error: " .. sql.LastError( result ))
+			end
 		end
 	end
 	
