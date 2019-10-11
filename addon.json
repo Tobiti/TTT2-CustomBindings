@@ -1,0 +1,6 @@
+{
+"title" : "[TTT2] Easy Custom Bindings",
+"type" : "tool",
+"tags" : "fun",
+"ignore" : ["*.psd", "*.vcproj", "*.svn*"]
+}
