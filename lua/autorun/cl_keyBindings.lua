@@ -1,4 +1,9 @@
 if SERVER then
+--Add new icon
+	resource.AddFile("materials/icon16/ttt-cb.png")
+
+	resource.AddWorkshop("1673119444")
+
     AddCSLuaFile()
 end
 if CLIENT then

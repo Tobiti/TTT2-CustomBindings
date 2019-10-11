@@ -105,4 +105,4 @@ function bindings.editEntry( key, concommand, name, category, activated, custom 
 	end
 end
 
-xgui.addModule( "Custom Bindings", bindings, "icon16/ttt.png", "xgui_gmsettings" )
+xgui.addModule( "Custom Bindings", bindings, "icon16/ttt-cb.png", "xgui_gmsettings" )
