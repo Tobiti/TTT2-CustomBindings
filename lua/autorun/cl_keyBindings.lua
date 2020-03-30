@@ -29,37 +29,41 @@ function conCommandsToBind.Get()
 	return bindList
 end
 
-function conCommandsToBind.Add(key, concommand, name, category, activated)
+function conCommandsToBind.Add(key, concommand, name, category, defaultKey, activated)
 	
 	--Check if conCommands is already in the bindList
 	if bindList[key] != nil then
 		--print("Eintrag " .. key .. " bereits Vorhanden")
 		return false
 	end
+
+	defaultKey = defaultKey or 0
 	
 	--Add the new entry
 	local newEntry = {}
 	newEntry.concommand=concommand
 	newEntry.name=name
 	newEntry.category=category
+	newEntry.defaultKey=defaultKey
 	newEntry.activated=activated
 	
 	bindList[key]= newEntry;
 	
-	print("[TTT2][Bindings] Add new Binding Entry: " .. key .. " " .. concommand .. " " .. name .. " " .. category .. " " .. tostring(activated))
+	print("[TTT2][Bindings] Add new Binding Entry: " .. key .. " " .. concommand .. " " .. name .. " " .. category .. " " .. defaultKey .. " " .. tostring(activated))
 	
 	return true
 end
 
-function conCommandsToBind.AddToServer(key, concommand, name, category, activated)
+function conCommandsToBind.AddToServer(key, concommand, name, category, defaultKey, activated)
 
 	if LocalPlayer():IsSuperAdmin() then
-		if conCommandsToBind.Add(key, concommand, name, category, activated) then
+		if conCommandsToBind.Add(key, concommand, name, category, defaultKey, activated) then
 			net.Start("ttt2_cb_addNewEntry")
 			net.WriteString(key)
 			net.WriteString(concommand)
 			net.WriteString(name)
 			net.WriteString(category)
+			net.WriteInt(defaultKey, 16)
 			net.WriteBool(activated)
 			net.SendToServer()
 		end
@@ -67,7 +71,7 @@ function conCommandsToBind.AddToServer(key, concommand, name, category, activate
 	
 	return false
 end
-function conCommandsToBind.AddToPlayer(key, concommand, name, category, activated, ply)
+function conCommandsToBind.AddToPlayer(key, concommand, name, category, defaultKey, activated, ply)
 	
 	if SERVER then
 		net.Start("ttt2_cb_addNewEntry")
@@ -75,6 +79,7 @@ function conCommandsToBind.AddToPlayer(key, concommand, name, category, activate
 		net.WriteString(concommand)
 		net.WriteString(name)
 		net.WriteString(category)
+		net.WriteInt(defaultKey, 16)
 		net.WriteBool(activated)
 		net.Send(ply)
 	end
@@ -114,34 +119,36 @@ function conCommandsToBind.RemoveFromPlayer(key, ply)
 	return false
 end
 
-function conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, activated)
+function conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, defaultKey, activated)
 	if oldKey == newKey then
 		--Edit the  entry
 		bindList[newKey].concommand = concommand;
 		bindList[newKey].name = name;
 		bindList[newKey].category = category;
+		bindList[newKey].defaultKey = defaultKey;
 		bindList[newKey].activated = activated;
 		
-		print("[TTT2][Bindings] Edit Binding Entry: " .. newKey .. " " .. concommand .. " " .. name .. " " .. category .. " " .. tostring(activated))
+		print("[TTT2][Bindings] Edit Binding Entry: " .. newKey .. " " .. concommand .. " " .. name .. " " .. category .. " " .. defaultKey .. " " .. tostring(activated))
 		return true
 	else 
 		conCommandsToBind.Remove(oldKey)
-		return conCommandsToBind.Add(newKey, concommand, name, category, activated)
+		return conCommandsToBind.Add(newKey, concommand, name, category, defaultKey, activated)
 	end
 	
 	return false
 end
 
-function conCommandsToBind.EditToServer(oldKey, newKey, concommand, name, category, activated)
+function conCommandsToBind.EditToServer(oldKey, newKey, concommand, name, category, defaultKey, activated)
 
 	if LocalPlayer():IsSuperAdmin() then
-		if conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, activated) then
+		if conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, defaultKey, activated) then
 			net.Start("ttt2_cb_editEntry")
 			net.WriteString(oldKey)
 			net.WriteString(newKey)
 			net.WriteString(concommand)
 			net.WriteString(name)
 			net.WriteString(category)
+			net.WriteInt(defaultKey, 16)
 			net.WriteBool(activated)
 			net.SendToServer()
 		end
@@ -150,7 +157,7 @@ function conCommandsToBind.EditToServer(oldKey, newKey, concommand, name, catego
 	return false
 end
 
-function conCommandsToBind.EditToPlayer(oldKey, newKey, concommand, name, category, activated, ply)
+function conCommandsToBind.EditToPlayer(oldKey, newKey, concommand, name, category, defaultKey, activated, ply)
 
 	if SERVER then
 		net.Start("ttt2_cb_editEntry")
@@ -159,6 +166,7 @@ function conCommandsToBind.EditToPlayer(oldKey, newKey, concommand, name, catego
 		net.WriteString(concommand)
 		net.WriteString(name)
 		net.WriteString(category)
+		net.WriteInt(defaultKey, 16)
 		net.WriteBool(activated)
 		net.Send(ply)
 	end
@@ -182,6 +190,7 @@ if SERVER then
 			net.WriteString(entry.concommand)
 			net.WriteString(entry.name)
 			net.WriteString(entry.category)
+			net.WriteInt(entry.defaultKey, 16)
 			net.WriteBool(entry.activated)
 			net.Send(ply)
 		end
@@ -193,24 +202,24 @@ if SERVER then
 	
 	local function CreateTable()
 		print("[TTT2][Bindings] Create new Table")
-		sql.Query( "CREATE TABLE ttt2_custombindings( Key TEXT NOT NULL, Name TEXT, Category TEXT, Command TEXT, Activated INTEGER, PRIMARY KEY(`Key`) )" )
+		sql.Query( "CREATE TABLE ttt2_custombindings( Key TEXT NOT NULL, Name TEXT, Category TEXT, DefaultKey INTEGER, Command TEXT, Activated INTEGER, PRIMARY KEY(`Key`) )" )
 	end
 	
-	function conCommandsToBind.AddCustomBindingToSQL(key, concommand, name, category, activated)
+	function conCommandsToBind.AddCustomBindingToSQL(key, concommand, name, category, defaultKey, activated)
 		local tmp = 0
 		if activated then
 			tmp = 1
 		end
-		print(sql.Query("INSERT INTO ttt2_custombindings( Key, Name, Category, Command, Activated ) VALUES( '"..key.."', '"..name.."', '"..category.."', '"..concommand.."', ".. tostring(tmp) .." )"))
+		print(sql.Query("INSERT INTO ttt2_custombindings( Key, Name, Category, DefaultKey, Command, Activated ) VALUES( '"..key.."', '"..name.."', '"..category.."', '"..defaultKey.."', '"..concommand.."', ".. tostring(tmp) .." )"))
 	end
 	
-	function conCommandsToBind.UpdateCustomBindingInSQL(key, concommand, name, category, activated)
+	function conCommandsToBind.UpdateCustomBindingInSQL(key, concommand, name, category, defaultKey, activated)
 		local tmp = 0
 		if activated then
 			tmp = 1
 		end
 		
-		local result = sql.Query("UPDATE ttt2_custombindings SET Name='"..name.."', Category='"..category.."', Command='"..concommand.."', Activated='".. tostring(tmp) .."' WHERE Key='"..key.."'")
+		local result = sql.Query("UPDATE ttt2_custombindings SET Name='"..name.."', Category='"..category.."', DefaultKey='"..defaultKey.."', Command='"..concommand.."', Activated='".. tostring(tmp) .."' WHERE Key='"..key.."'")
 		if result == false then
 			print("[TTT2][Bindings] Error: " .. sql.LastError( result ))
 		end
@@ -223,13 +232,20 @@ if SERVER then
 		end
 	end
 	
+	function conCommandsToBind.AlterTableIfNeeded()
+		print(sql.Query("ALTER TABLE ttt2_custombindings ADD DefaultKey INTEGER"))
+	end
+
 	function conCommandsToBind.LoadCustomBindingFromSQL()
 		local result = sql.Query("SELECT * FROM ttt2_custombindings")
-		
+		if #result == 0 or table.Count(result[1]) ~= 6 then
+			conCommandsToBind.AlterTableIfNeeded()
+		end
+
 		if result != nil then
 			if result then
 				for k, v in pairs(result) do
-					conCommandsToBind.Add(v.Key, v.Command, v.Name, v.Category, v.Activated == "1")
+					conCommandsToBind.Add(v.Key, v.Command, v.Name, v.Category, tonumber(v.DefaultKey) or 0, v.Activated == "1")
 				end
 			else
 				print("[TTT2][Bindings] Error: " .. sql.LastError( result ))
@@ -237,7 +253,7 @@ if SERVER then
 		end
 	end
 	
-	if not  sql.TableExists("ttt2_custombindings") then
+	if not sql.TableExists("ttt2_custombindings") then
 		CreateTable()
 	end
 	conCommandsToBind.LoadCustomBindingFromSQL()
@@ -255,7 +271,7 @@ local function UpdateBindings()
 					function()
 					end)
 				end
-				bind.AddSettingsBinding(key, entry.name, entry.category)
+				bind.AddSettingsBinding(key, entry.name, entry.category, entry.defaultKey)
 			end
 		end
 	end
@@ -277,21 +293,22 @@ net.Receive ("ttt2_cb_addNewEntry", function( length, ply )
 	local concommand = net.ReadString()
 	local name = net.ReadString()
 	local category = net.ReadString()
+	local defaultKey = net.ReadInt(16)
 	local activated = net.ReadBool()
 	
-	if not conCommandsToBind.Add(key, concommand, name, category, activated) then
-		conCommandsToBind.Edit(key, key, concommand, name, category, activated)
+	if not conCommandsToBind.Add(key, concommand, name, category, defaultKey, activated) then
+		conCommandsToBind.Edit(key, key, concommand, name, category, defaultKey, activated)
 		if SERVER then
-			UpdateCustomBindingInSQL(key, concommand, name, category, activated)		
+			UpdateCustomBindingInSQL(key, concommand, name, category, defaultKey, activated)		
 			for k, p in pairs(player.GetAll()) do
-				conCommandsToBind.EditToPlayer(key, key, concommand, name, category, activated, p)
+				conCommandsToBind.EditToPlayer(key, key, concommand, name, category, defaultKey, activated, p)
 			end
 		end
 	else
 		if SERVER then
-			conCommandsToBind.AddCustomBindingToSQL(key, concommand, name, category, activated)		
+			conCommandsToBind.AddCustomBindingToSQL(key, concommand, name, category, defaultKey, activated)		
 			for k, p in pairs(player.GetAll()) do
-				conCommandsToBind.AddToPlayer(key, concommand, name, category, activated, p)
+				conCommandsToBind.AddToPlayer(key, concommand, name, category, defaultKey, activated, p)
 			end
 		end
 	end
@@ -312,16 +329,17 @@ net.Receive ("ttt2_cb_editEntry", function( length, ply )
 	local concommand = net.ReadString()
 	local name = net.ReadString()
 	local category = net.ReadString()
+	local defaultKey = net.ReadInt(16)
 	local activated = net.ReadBool()
 	
-	conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, activated)
+	conCommandsToBind.Edit(oldKey, newKey, concommand, name, category, defaultKey, activated)
 	
 	if CLIENT then
 		UpdateBindings()
 	else
-		conCommandsToBind.UpdateCustomBindingInSQL(oldKey, concommand, name, category, activated)	
+		conCommandsToBind.UpdateCustomBindingInSQL(oldKey, concommand, name, category, defaultKey, activated)	
 		for k, p in pairs(player.GetAll()) do
-			conCommandsToBind.EditToPlayer(oldKey, newKey, concommand, name, category, activated, p)
+			conCommandsToBind.EditToPlayer(oldKey, newKey, concommand, name, category, defaultKey, activated, p)
 		end
 	end
 end)

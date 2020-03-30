@@ -2,27 +2,27 @@ local bindings = xlib.makepanel{ parent=xgui.null }
 
 xlib.makelabel{x = 5, y = 270, w = 600, wordwrap = true, label = "Help:\n If Command is empty, the function behind the binding isn't set or overwritten!", parent = bindings}
 
-
 bindings.list = xlib.makelistview{ x=5, y=20, w=550, h=190, parent=bindings }
 bindings.list:AddColumn( "Name" )
 bindings.list:AddColumn( "Label" )
 bindings.list:AddColumn( "Category" )
 bindings.list:AddColumn( "Command" )
+bindings.list:AddColumn( "Default Key")
 bindings.list:AddColumn( "Active" )
 bindings.list:AddColumn( "Custom" )
 bindings.list.OnRowSelected = function( self, LineID, Line )
 	bindings.editlist:SetDisabled( false )
-	bindings.removelist:SetDisabled( !Line:GetColumnText(6) )
+	bindings.removelist:SetDisabled( !Line:GetColumnText(7) )
 end
 
 local function UpdateList()
 	bindings.list:Clear()
 	for id, v in pairs( conCommandsToBind.Get() ) do
-		bindings.list:AddLine( id, v.name, v.category, v.concommand, v.activated ,true )
+		bindings.list:AddLine( id, v.name, v.category, v.concommand, input.GetKeyName(v.defaultKey or BUTTON_CODE_NONE), v.activated ,true )
 	end
 	for id, v in ipairs( bind.GetSettingsBindings() ) do
 		if conCommandsToBind.Get()[v.name] == nil then
-			bindings.list:AddLine( v.name, v.label, v.category, "", true, false )
+			bindings.list:AddLine( v.name, v.label, v.category, "", input.GetKeyName(v.defaultKey or BUTTON_CODE_NONE), true, false )
 		end
 	end
 end
@@ -39,7 +39,7 @@ bindings.editlist = xlib.makebutton{ x=160, y=210, w=150, label="Edit Binding", 
 bindings.editlist.DoClick = function()
 	if bindings.list:GetSelectedLine() then
 		local key = bindings.list:GetSelected()[1]:GetColumnText(1)		
-		bindings.editEntry( key, bindings.list:GetSelected()[1]:GetColumnText(4), bindings.list:GetSelected()[1]:GetColumnText(2), bindings.list:GetSelected()[1]:GetColumnText(3), bindings.list:GetSelected()[1]:GetColumnText(5), bindings.list:GetSelected()[1]:GetColumnText(6) )
+		bindings.editEntry( key, bindings.list:GetSelected()[1]:GetColumnText(4), bindings.list:GetSelected()[1]:GetColumnText(2), bindings.list:GetSelected()[1]:GetColumnText(3), bindings.list:GetSelected()[1]:GetColumnText(5), bindings.list:GetSelected()[1]:GetColumnText(6), bindings.list:GetSelected()[1]:GetColumnText(7) )
 	end
 end
 -- Remove Button
@@ -58,7 +58,7 @@ bindings.refreshlist.DoClick = function()
 end
 
 function bindings.addNewEntry()
-	local frame = xlib.makeframe{ label="Add new Binding Entry", w=300, h=180, skin=xgui.settings.skin }
+	local frame = xlib.makeframe{ label="Add new Binding Entry", w=300, h=205, skin=xgui.settings.skin }
 	
 	xlib.makelabel{ x=5, y=30, label="Key:", parent=frame }
 	frame.bindingKey =	xlib.maketextbox{ x=100, y=30, w=180, parent=frame, selectall=true, text="Enter key" };
@@ -68,19 +68,23 @@ function bindings.addNewEntry()
 	frame.bindingCategory =	xlib.maketextbox{ x=100, y=80, w=180, parent=frame, selectall=true, text="Enter category" };
 	xlib.makelabel{ x=5, y=105, label="Command:", parent=frame }
 	frame.bindingCommand =	xlib.maketextbox{ x=100, y=105, w=180, parent=frame, selectall=true, text="" };
+	xlib.makelabel{ x=5, y=130, label="Default Key:", parent=frame }
+	frame.bindingDefaultKey = vgui.Create("DBinder", frame)
+	frame.bindingDefaultKey:SetPos(100, 130)
+	frame.bindingDefaultKey:SetSize(180, 22)
 	
-	frame.bindingActive = xlib.makecheckbox{ x=100, y=130, label="Active", value=true, parent=frame }
+	frame.bindingActive = xlib.makecheckbox{ x=100, y=155, label="Active", value=true, parent=frame }
 	
-	frame.apply = xlib.makebutton{ x=130, y=155, w=150, label="Add", parent=frame }
+	frame.apply = xlib.makebutton{ x=130, y=180, w=150, label="Add", parent=frame }
 	frame.apply.DoClick = function()
-		conCommandsToBind.AddToServer(frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingActive:GetChecked())
+		conCommandsToBind.AddToServer(frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingDefaultKey:GetValue(), frame.bindingActive:GetChecked())
 		UpdateList()
 		frame:Remove()
 	end
 end
 
-function bindings.editEntry( key, concommand, name, category, activated, custom )
-	local frame = xlib.makeframe{ label="Edit Entry " .. name, w=300, h=180, skin=xgui.settings.skin }
+function bindings.editEntry( key, concommand, name, category, defaultKey, activated, custom )
+	local frame = xlib.makeframe{ label="Edit Entry " .. name, w=300, h=205, skin=xgui.settings.skin }
 	
 	xlib.makelabel{ x=5, y=30, label="Key:", parent=frame }
 	frame.bindingKey =	xlib.maketextbox{ x=100, y=30, w=180, parent=frame, selectall=true, text=key };
@@ -90,15 +94,20 @@ function bindings.editEntry( key, concommand, name, category, activated, custom 
 	frame.bindingCategory =	xlib.maketextbox{ x=100, y=80, w=180, parent=frame, selectall=true, text=category };
 	xlib.makelabel{ x=5, y=105, label="Command:", parent=frame }
 	frame.bindingCommand =	xlib.maketextbox{ x=100, y=105, w=180, parent=frame, selectall=true, text=concommand };
+	xlib.makelabel{ x=5, y=130, label="Default Key:", parent=frame }
+	frame.bindingDefaultKey = vgui.Create("DBinder", frame)
+	frame.bindingDefaultKey:SetPos(100, 130)
+	frame.bindingDefaultKey:SetSize(180, 22)
+	frame.bindingDefaultKey:SetValue(input.GetKeyCode(defaultKey))
+
+	frame.bindingActive = xlib.makecheckbox{ x=100, y=155, label="Active", value=activated, parent=frame }
 	
-	frame.bindingActive = xlib.makecheckbox{ x=100, y=130, label="Active", value=activated, parent=frame }
-	
-	frame.apply = xlib.makebutton{ x=130, y=155, w=150, label="Apply", parent=frame }
+	frame.apply = xlib.makebutton{ x=130, y=180, w=150, label="Apply", parent=frame }
 	frame.apply.DoClick = function()
 		if custom then
-			conCommandsToBind.EditToServer(key, frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingActive:GetChecked())
+			conCommandsToBind.EditToServer(key, frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingDefaultKey:GetValue(), frame.bindingActive:GetChecked())
 		else
-			conCommandsToBind.AddToServer(frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingActive:GetChecked())
+			conCommandsToBind.AddToServer(frame.bindingKey:GetValue(), frame.bindingCommand:GetValue(), frame.bindingLabel:GetValue(), frame.bindingCategory:GetValue(), frame.bindingDefaultKey:GetValue(), frame.bindingActive:GetChecked())
 		end
 		UpdateList()
 		frame:Remove()
